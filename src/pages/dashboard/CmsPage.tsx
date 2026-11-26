@@ -1,0 +1,1066 @@
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import type { CmsFaq, CmsPageSlug, FaqCategory, SiteSettings, SiteSocialPlatform } from '@/types/admin.types';
+import {
+  useCreateFaqMutation,
+  useDeleteFaqMutation,
+  useGetCmsPageQuery,
+  useGetFaqsQuery,
+  useGetSiteSettingsQuery,
+  useMoveFaqMutation,
+  useSaveCmsPageMutation,
+  useUpdateFaqMutation,
+  useUpdateSiteSettingsMutation,
+} from '@/lib/api/cmsApi';
+import { getErrorMessage } from '@/lib/api/baseApi';
+import { formatDate } from '@/lib/utils';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
+import { Modal } from '@/components/ui/Modal';
+import { ImageUploadBox } from '@/components/shared/ImageUploadBox';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import {
+  FileText,
+  HelpCircle,
+  Image as ImageIcon,
+  Save,
+  Plus,
+  Trash2,
+  Edit2,
+  CheckCircle,
+  Search,
+  ExternalLink,
+  Building2,
+  User,
+  ChevronUp,
+  ChevronDown,
+  Share2,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
+import { PartnerBrandsSection } from './components/PartnerBrandsSection';
+
+/** Platforms shown in the Branding tab. Keys match the server enum (`x` = Twitter). */
+type SocialKey = Extract<SiteSocialPlatform, 'facebook' | 'instagram' | 'x' | 'linkedin' | 'youtube'>;
+
+interface OfficialSocialConfig {
+  key: SocialKey;
+  name: string;
+  placeholder: string;
+  handleHint: string;
+  badge: React.ReactNode;
+}
+
+const OFFICIAL_SOCIAL_PLATFORMS: OfficialSocialConfig[] = [
+  {
+    key: 'facebook',
+    name: 'Facebook',
+    placeholder: 'https://facebook.com/influverse',
+    handleHint: 'facebook.com/...',
+    badge: (
+      <svg className="w-8 h-8 shrink-0 rounded-xl shadow-2xs" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#1877F2" />
+        <path
+          d="M21 16.5h-3.2V27h-4.3V16.5H11v-3.7h2.5V10.2c0-3.3 2-5.2 5.1-5.2 1.5 0 3 .3 3 .3v3.4h-1.7c-1.7 0-2.2 1-2.2 2.1v2h3.9l-.6 3.7z"
+          fill="#FFFFFF"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'instagram',
+    name: 'Instagram',
+    placeholder: 'https://instagram.com/influverse',
+    handleHint: 'instagram.com/...',
+    badge: (
+      <svg className="w-8 h-8 shrink-0 rounded-xl shadow-2xs" viewBox="0 0 32 32" fill="none">
+        <defs>
+          <linearGradient id="igOfficialGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#833AB4" />
+            <stop offset="25%" stopColor="#C13584" />
+            <stop offset="50%" stopColor="#E1306C" />
+            <stop offset="75%" stopColor="#FD1D1D" />
+            <stop offset="100%" stopColor="#F77737" />
+          </linearGradient>
+        </defs>
+        <rect width="32" height="32" rx="8" fill="url(#igOfficialGrad)" />
+        <rect x="7" y="7" width="18" height="18" rx="5" stroke="#FFFFFF" strokeWidth="2" fill="none" />
+        <circle cx="16" cy="16" r="4.3" stroke="#FFFFFF" strokeWidth="2" fill="none" />
+        <circle cx="21.5" cy="10.5" r="1.3" fill="#FFFFFF" />
+      </svg>
+    ),
+  },
+  {
+    key: 'x',
+    name: 'X (Twitter)',
+    placeholder: 'https://x.com/influverse',
+    handleHint: 'x.com/...',
+    badge: (
+      <svg className="w-8 h-8 shrink-0 rounded-xl shadow-2xs" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#000000" />
+        <path
+          d="M19.5 7h2.7l-5.9 6.8 7 9.2h-5.4l-4.2-5.5-4.9 5.5H6.1l6.3-7.2L5.8 7h5.6l3.8 5.1L19.5 7zm-1 14.3h1.5L10.7 8.5H9.1l9.4 12.8z"
+          fill="#FFFFFF"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'linkedin',
+    name: 'LinkedIn',
+    placeholder: 'https://linkedin.com/company/influverse',
+    handleHint: 'linkedin.com/company/...',
+    badge: (
+      <svg className="w-8 h-8 shrink-0 rounded-xl shadow-2xs" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#0A66C2" />
+        <path
+          d="M10.8 13.5H7.8V24h3V13.5zm-1.5-4.2c-1 0-1.8.8-1.8 1.7 0 1 .8 1.7 1.8 1.7 1 0 1.8-.8 1.8-1.7 0-.9-.8-1.7-1.8-1.7zm15.2 7.7c0-3.3-1.8-4.9-4.1-4.9-1.9 0-2.8 1.1-3.3 1.8V13.5H14V24h3v-5.8c0-1.5.3-3 2.1-3 1.8 0 1.8 1.7 1.8 3.1V24h3v-7z"
+          fill="#FFFFFF"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'youtube',
+    name: 'YouTube',
+    placeholder: 'https://youtube.com/@influverse',
+    handleHint: 'youtube.com/@...',
+    badge: (
+      <svg className="w-8 h-8 shrink-0 rounded-xl shadow-2xs" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#FF0000" />
+        <path d="M13 10.5l8.5 5.5-8.5 5.5v-11z" fill="#FFFFFF" />
+      </svg>
+    ),
+  },
+];
+
+
+/** Pages editable from the CMS (server `CMS_PAGE_SLUGS`). */
+const CMS_PAGES: { slug: CmsPageSlug; title: string }[] = [
+  { slug: 'terms', title: 'Terms of Service' },
+  { slug: 'privacy', title: 'Privacy Policy' },
+  { slug: 'about', title: 'About Us' },
+];
+
+const EMPTY_SOCIALS: Record<SocialKey, string> = { facebook: '', instagram: '', x: '', linkedin: '', youtube: '' };
+
+/** Bumps the last part of a version: "1.0" → "1.1", "2.3.1" → "2.3.2". */
+const nextVersion = (version?: string) => {
+  const parts = (version || '1.0').split('.').map((n) => Number(n) || 0);
+  parts[parts.length - 1] += 1;
+  return parts.join('.');
+};
+
+/** Small green / red banner used after saves. */
+const Notice: React.FC<{ kind: 'success' | 'error'; text: string }> = ({ kind, text }) => (
+  <div
+    className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 border ${
+      kind === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-700'
+    }`}
+  >
+    {kind === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4" />}
+    <span>{text}</span>
+  </div>
+);
+
+const LoadingBlock: React.FC = () => (
+  <div className="p-12 flex items-center justify-center text-neutral-400">
+    <Loader2 className="w-5 h-5 animate-spin" />
+  </div>
+);
+
+type SitePatch = Partial<SiteSettings>;
+
+export const CmsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs: Array<'legal' | 'brands' | 'faqs' | 'branding'> = ['legal', 'brands', 'faqs', 'branding'];
+  const queryTab = searchParams.get('tab') as 'legal' | 'brands' | 'faqs' | 'branding' | null;
+  const initialTab = queryTab && validTabs.includes(queryTab) ? queryTab : 'faqs';
+  const [activeTab, setActiveTabState] = useState<'legal' | 'brands' | 'faqs' | 'branding'>(initialTab);
+
+  const setActiveTab = (tab: 'legal' | 'brands' | 'faqs' | 'branding') => {
+    setActiveTabState(tab);
+    setSearchParams({ tab });
+  };
+
+  // ---------------------------------------------------------------------------
+  // Legal / about pages
+  // ---------------------------------------------------------------------------
+  const [selectedLegalSlug, setSelectedLegalSlug] = useState<CmsPageSlug>('terms');
+  const {
+    data: currentLegalDoc,
+    isFetching: isLegalLoading,
+    error: legalLoadError,
+  } = useGetCmsPageQuery(selectedLegalSlug, { skip: activeTab !== 'legal' });
+  const [saveCmsPage, { isLoading: isSavingLegal }] = useSaveCmsPageMutation();
+  // A 404 only means the page was never saved yet — the admin can create it here.
+  const legalMissing = (legalLoadError as { status?: number } | undefined)?.status === 404;
+  const legalTitle = currentLegalDoc?.title || CMS_PAGES.find((p) => p.slug === selectedLegalSlug)?.title || '';
+
+  const [legalContent, setLegalContent] = useState('');
+  const [isEditingPolicy, setIsEditingPolicy] = useState(false);
+  const [legalNotice, setLegalNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  // Load the server copy into the editor whenever the selected page arrives.
+  useEffect(() => {
+    if (!isEditingPolicy) setLegalContent(currentLegalDoc?.contentMarkdown || '');
+  }, [currentLegalDoc, isEditingPolicy]);
+
+  const handleSelectSlug = (slug: CmsPageSlug) => {
+    setSelectedLegalSlug(slug);
+    setIsEditingPolicy(false);
+    setLegalNotice(null);
+  };
+
+  const handleCancelEditPolicy = () => {
+    setLegalContent(currentLegalDoc?.contentMarkdown || '');
+    setIsEditingPolicy(false);
+  };
+
+  const handleSaveLegal = async () => {
+    if (!legalContent.trim()) {
+      setLegalNotice({ kind: 'error', text: 'Content cannot be empty.' });
+      return;
+    }
+    try {
+      await saveCmsPage({
+        slug: selectedLegalSlug,
+        title: legalTitle,
+        contentMarkdown: legalContent,
+        // Every save is a new version; the server keeps the last 10 for rollback.
+        version: currentLegalDoc ? nextVersion(currentLegalDoc.version) : '1.0',
+        isPublished: true,
+      }).unwrap();
+      setIsEditingPolicy(false);
+      setLegalNotice({ kind: 'success', text: 'Page saved and published on the website.' });
+    } catch (err) {
+      setLegalNotice({ kind: 'error', text: getErrorMessage(err) });
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // FAQs (separate lists for brands and creators)
+  // ---------------------------------------------------------------------------
+  const { data: faqs = [], isLoading: isFaqsLoading, error: faqsError } = useGetFaqsQuery(undefined, {
+    skip: activeTab !== 'faqs',
+  });
+  const [createFaq, { isLoading: isCreatingFaq }] = useCreateFaqMutation();
+  const [updateFaq, { isLoading: isUpdatingFaq }] = useUpdateFaqMutation();
+  const [deleteFaq] = useDeleteFaqMutation();
+  const [moveFaq, { isLoading: isMovingFaq }] = useMoveFaqMutation();
+
+  const [activeFaqAudience, setActiveFaqAudience] = useState<FaqCategory>('brands');
+  const [faqCategory, setFaqCategory] = useState<FaqCategory>('brands');
+  const [faqSearchQuery, setFaqSearchQuery] = useState('');
+  const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<CmsFaq | null>(null);
+  const [faqQuestion, setFaqQuestion] = useState('');
+  const [faqAnswer, setFaqAnswer] = useState('');
+  const [faqError, setFaqError] = useState('');
+
+  const handleOpenNewFaq = () => {
+    setEditingFaq(null);
+    setFaqQuestion('');
+    setFaqAnswer('');
+    setFaqError('');
+    setFaqCategory(activeFaqAudience);
+    setIsFaqModalOpen(true);
+  };
+
+  const handleOpenEditFaq = (faq: CmsFaq) => {
+    setEditingFaq(faq);
+    setFaqQuestion(faq.question);
+    setFaqAnswer(faq.answer);
+    setFaqError('');
+    setFaqCategory(faq.category);
+    setIsFaqModalOpen(true);
+  };
+
+  const handleSaveFaq = async () => {
+    if (!faqQuestion.trim() || !faqAnswer.trim()) {
+      setFaqError('Question and answer are required.');
+      return;
+    }
+    const body = { question: faqQuestion.trim(), answer: faqAnswer.trim(), category: faqCategory };
+    try {
+      if (editingFaq) await updateFaq({ id: editingFaq.id, ...body }).unwrap();
+      else await createFaq({ ...body, isPublished: true }).unwrap();
+      setIsFaqModalOpen(false);
+    } catch (err) {
+      setFaqError(getErrorMessage(err));
+    }
+  };
+
+  const handleDeleteFaq = async (faq: CmsFaq) => {
+    if (!window.confirm(`Delete "${faq.question}"?`)) return;
+    try {
+      await deleteFaq(faq.id).unwrap();
+    } catch (err) {
+      window.alert(getErrorMessage(err));
+    }
+  };
+
+  const brandFaqs = faqs.filter((f) => f.category === 'brands');
+  const creatorFaqs = faqs.filter((f) => f.category === 'creators');
+  const audienceFaqs = activeFaqAudience === 'brands' ? brandFaqs : creatorFaqs;
+
+  const filteredFaqs = audienceFaqs.filter((f) => {
+    if (!faqSearchQuery.trim()) return true;
+    const query = faqSearchQuery.toLowerCase();
+    return f.question.toLowerCase().includes(query) || f.answer.toLowerCase().includes(query);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Branding (site settings)
+  // ---------------------------------------------------------------------------
+  const { data: site, isLoading: isSiteLoading } = useGetSiteSettingsQuery(undefined, { skip: activeTab !== 'branding' });
+  const [updateSite, { isLoading: isSavingSite }] = useUpdateSiteSettingsMutation();
+
+  const [logoLight, setLogoLight] = useState('');
+  const [logoDark, setLogoDark] = useState('');
+  const [favicon, setFavicon] = useState('');
+  const [headline, setHeadline] = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [socialLinks, setSocialLinks] = useState<Record<SocialKey, string>>(EMPTY_SOCIALS);
+  const [brandNotice, setBrandNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  // Fill the form once the saved settings arrive.
+  useEffect(() => {
+    if (!site) return;
+    setLogoLight(site.logoLightUrl || '');
+    setLogoDark(site.logoDarkUrl || '');
+    setFavicon(site.faviconUrl || '');
+    setHeadline(site.heroHeadline || '');
+    setSubtitle(site.heroSubtitle || '');
+    setSupportEmail(site.supportEmail || '');
+    const links = { ...EMPTY_SOCIALS };
+    for (const link of site.socialLinks ?? []) {
+      if (link.platform in links) links[link.platform as SocialKey] = link.url;
+    }
+    setSocialLinks(links);
+  }, [site]);
+
+  // Social Link Edit Modal State
+  const [editingSocialKey, setEditingSocialKey] = useState<SocialKey | null>(null);
+  const [tempSocialUrl, setTempSocialUrl] = useState('');
+
+  const handleOpenEditSocial = (key: SocialKey) => {
+    setEditingSocialKey(key);
+    setTempSocialUrl(socialLinks[key] || '');
+  };
+
+  /** The server stores social links as a list; empty URLs are left out. */
+  const toSocialList = (links: Record<SocialKey, string>) =>
+    (Object.entries(links) as [SocialKey, string][])
+      .filter(([, url]) => url.trim())
+      .map(([platform, url]) => ({ platform, url: url.trim() }));
+
+  const saveSite = async (body: SitePatch) => {
+    try {
+      await updateSite(body).unwrap();
+      setBrandNotice({ kind: 'success', text: 'Branding saved. The website updates within a minute.' });
+      return true;
+    } catch (err) {
+      setBrandNotice({ kind: 'error', text: getErrorMessage(err) });
+      return false;
+    }
+  };
+
+  const handleSaveSocialModal = async () => {
+    if (!editingSocialKey) return;
+    const updated = { ...socialLinks, [editingSocialKey]: tempSocialUrl.trim() };
+    if (await saveSite({ socialLinks: toSocialList(updated) })) {
+      setSocialLinks(updated);
+      setEditingSocialKey(null);
+    }
+  };
+
+  const handleSaveBrand = () => {
+    // Only send filled fields — the server rejects empty strings for URLs / email.
+    const body: SitePatch = {
+      heroHeadline: headline.trim(),
+      heroSubtitle: subtitle.trim(),
+      socialLinks: toSocialList(socialLinks),
+    };
+    if (logoLight) body.logoLightUrl = logoLight;
+    if (logoDark) body.logoDarkUrl = logoDark;
+    if (favicon) body.faviconUrl = favicon;
+    if (supportEmail.trim()) body.supportEmail = supportEmail.trim();
+    void saveSite(body);
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="CMS"
+        subtitle="Manage website policies, partner brand logos, FAQs, and branding assets."
+      />
+
+      {/* Main CMS Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-neutral-200">
+        <button
+          onClick={() => setActiveTab('legal')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'legal'
+              ? 'border-brand-black text-brand-black'
+              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Pages</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('faqs')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'faqs'
+              ? 'border-brand-black text-brand-black'
+              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>FAQs</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('branding')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'branding'
+              ? 'border-brand-black text-brand-black'
+              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <ImageIcon className="w-4 h-4" />
+          <span>Branding</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('brands')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'brands'
+              ? 'border-brand-black text-brand-black'
+              : 'border-transparent text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Trusted By</span>
+        </button>
+      </div>
+
+      {/* TAB: PARTNER BRANDS (AUTO-SCROLL MARQUEE LOGOS) */}
+      {activeTab === 'brands' && <PartnerBrandsSection />}
+
+      {/* TAB 1: LEGAL DOCUMENTS */}
+      {activeTab === 'legal' && (
+        <div className="space-y-6">
+          {legalNotice && <Notice kind={legalNotice.kind} text={legalNotice.text} />}
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Left selector */}
+            <div className="space-y-2">
+              <span className="text-xs uppercase font-bold text-neutral-500 tracking-wider">
+                Policies
+              </span>
+              <div className="space-y-1.5">
+                {CMS_PAGES.map((doc) => (
+                  <button
+                    key={doc.slug}
+                    onClick={() => handleSelectSlug(doc.slug)}
+                    className={`w-full p-3.5 rounded-xl border text-left transition-all ${
+                      selectedLegalSlug === doc.slug
+                        ? 'border-brand-black bg-brand-black text-white shadow-sm'
+                        : 'border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <div className="text-sm font-bold leading-snug">{doc.title}</div>
+                    <div
+                      className={`text-xs mt-1 font-medium ${
+                        selectedLegalSlug === doc.slug
+                          ? 'text-neutral-300'
+                          : 'text-neutral-500'
+                      }`}
+                    >
+                      /{doc.slug}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Editor Area */}
+            <div className="lg:col-span-3 space-y-4">
+              <Card className="p-5 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100 mb-4">
+                  <div>
+                    <h3 className="text-base font-extrabold text-neutral-950 flex items-center gap-2">
+                      <span>{legalTitle}</span>
+                      {isEditingPolicy && (
+                        <Badge variant="pink" size="sm">
+                          Editing
+                        </Badge>
+                      )}
+                    </h3>
+                    <p className="text-xs text-neutral-500 font-medium mt-0.5">
+                      {currentLegalDoc
+                        ? `Version ${currentLegalDoc.version} · Last updated ${currentLegalDoc.lastModified ? formatDate(currentLegalDoc.lastModified) : '—'}`
+                        : legalMissing
+                          ? 'Not created yet — write the content and save to publish it.'
+                          : ''}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {isEditingPolicy ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="font-bold text-xs"
+                          onClick={handleCancelEditPolicy}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="accent"
+                          size="sm"
+                          className="font-bold text-xs"
+                          onClick={handleSaveLegal}
+                          isLoading={isSavingLegal}
+                          leftIcon={<Save className="w-3.5 h-3.5" />}
+                        >
+                          Save Policy
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="accent"
+                        size="sm"
+                        className="font-bold text-xs"
+                        onClick={() => setIsEditingPolicy(true)}
+                        leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                      >
+                        Edit Policy
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Formatted Text Editor */}
+                {isLegalLoading ? (
+                  <LoadingBlock />
+                ) : legalLoadError && !legalMissing ? (
+                  <Notice kind="error" text={getErrorMessage(legalLoadError)} />
+                ) : (
+                  <RichTextEditor
+                    value={legalContent}
+                    onChange={setLegalContent}
+                    placeholder="Write policy content here..."
+                    minHeight="440px"
+                    readOnly={!isEditingPolicy}
+                  />
+                )}
+              </Card>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: SEPARATE FAQS FOR BRANDS & CREATORS */}
+      {activeTab === 'faqs' && (
+        <div className="space-y-6">
+          {/* Header Controls: Segmented Audience Switcher & Search / Add */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-white border border-neutral-200 rounded-2xl shadow-xs">
+            {/* Segmented Brand vs Creator Switcher */}
+            <div className="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveFaqAudience('brands')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeFaqAudience === 'brands'
+                    ? 'bg-white text-brand-black shadow-xs font-extrabold'
+                    : 'text-neutral-500 hover:text-neutral-900'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>For Brands</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    activeFaqAudience === 'brands'
+                      ? 'bg-brand-black text-white'
+                      : 'bg-neutral-200 text-neutral-600'
+                  }`}
+                >
+                  {brandFaqs.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveFaqAudience('creators')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeFaqAudience === 'creators'
+                    ? 'bg-white text-brand-black shadow-xs font-extrabold'
+                    : 'text-neutral-500 hover:text-neutral-900'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>For Creators</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    activeFaqAudience === 'creators'
+                      ? 'bg-brand-black text-white'
+                      : 'bg-neutral-200 text-neutral-600'
+                  }`}
+                >
+                  {creatorFaqs.length}
+                </span>
+              </button>
+            </div>
+
+            {/* Search & Add Action */}
+            <div className="flex items-center gap-3 flex-1 max-w-md">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="text"
+                  value={faqSearchQuery}
+                  onChange={(e) => setFaqSearchQuery(e.target.value)}
+                  placeholder={`Search ${activeFaqAudience === 'brands' ? 'Brand' : 'Creator'} FAQs...`}
+                  className="w-full pl-10 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-semibold placeholder:text-neutral-400 focus:outline-none focus:bg-white focus:border-brand-pink focus:ring-2 focus:ring-brand-pink/20"
+                />
+              </div>
+
+              <Button
+                variant="accent"
+                size="sm"
+                className="font-bold shrink-0 text-xs"
+                onClick={handleOpenNewFaq}
+                leftIcon={<Plus className="w-3.5 h-3.5" />}
+              >
+                Add Question
+              </Button>
+            </div>
+          </div>
+
+          {/* FAQ List for Active Audience */}
+          <div className="space-y-3">
+            {isFaqsLoading ? (
+              <LoadingBlock />
+            ) : faqsError ? (
+              <Notice kind="error" text={getErrorMessage(faqsError)} />
+            ) : filteredFaqs.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-2xl border border-neutral-200 text-neutral-500 text-xs font-medium">
+                {faqSearchQuery
+                  ? `No ${activeFaqAudience === 'brands' ? 'Brand' : 'Creator'} FAQ items found matching "${faqSearchQuery}".`
+                  : `No FAQ items added for ${activeFaqAudience === 'brands' ? 'Brands' : 'Creators'} yet.`}
+              </div>
+            ) : (
+              filteredFaqs.map((faq, index) => (
+                <Card key={faq.id} hoverEffect className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        {/* Clean Up / Down Arrow Controls within Category */}
+                        <div className="inline-flex items-center bg-neutral-100 rounded-lg border border-neutral-200 p-0.5 shadow-2xs">
+                          <button
+                            type="button"
+                            disabled={index === 0 || isMovingFaq || Boolean(faqSearchQuery)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void moveFaq({ id: faq.id, direction: 'up' });
+                            }}
+                            title="Move question up"
+                            className="p-1 rounded text-neutral-600 hover:text-neutral-950 hover:bg-white disabled:opacity-25 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+
+                          <span className="font-mono text-xs font-black text-neutral-700 px-1.5 select-none">
+                            #{index + 1}
+                          </span>
+
+                          <button
+                            type="button"
+                            disabled={index === filteredFaqs.length - 1 || isMovingFaq || Boolean(faqSearchQuery)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void moveFaq({ id: faq.id, direction: 'down' });
+                            }}
+                            title="Move question down"
+                            className="p-1 rounded text-neutral-600 hover:text-neutral-950 hover:bg-white disabled:opacity-25 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <h4 className="text-sm font-extrabold text-neutral-950">
+                        {faq.question}
+                      </h4>
+                      <p className="text-xs text-neutral-600 leading-relaxed max-w-3xl font-medium">
+                        {faq.answer}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="font-bold text-xs p-2 text-neutral-600 hover:text-neutral-950"
+                        onClick={() => handleOpenEditFaq(faq)}
+                        title="Edit question"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-rose-600 hover:bg-rose-50 p-2"
+                        onClick={() => handleDeleteFaq(faq)}
+                        title="Delete question"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Add / Edit FAQ Modal */}
+          {isFaqModalOpen && (
+            <Modal
+              isOpen={true}
+              onClose={() => setIsFaqModalOpen(false)}
+              title={editingFaq ? 'Edit FAQ' : 'Add FAQ'}
+              maxWidth="md"
+              footer={
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-bold"
+                    onClick={() => setIsFaqModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="accent"
+                    size="sm"
+                    className="font-bold"
+                    onClick={handleSaveFaq}
+                    isLoading={isCreatingFaq || isUpdatingFaq}
+                  >
+                    {editingFaq ? 'Save Changes' : 'Add Question'}
+                  </Button>
+                </>
+              }
+            >
+              <div className="space-y-4">
+                {faqError && <Notice kind="error" text={faqError} />}
+                {/* Target Audience Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+                    Target Audience
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFaqCategory('brands')}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        faqCategory === 'brands'
+                          ? 'border-brand-black bg-brand-black text-white shadow-2xs font-extrabold'
+                          : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>For Brands</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFaqCategory('creators')}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        faqCategory === 'creators'
+                          ? 'border-brand-black bg-brand-black text-white shadow-2xs font-extrabold'
+                          : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+                      }`}
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>For Creators</span>
+                    </button>
+                  </div>
+                </div>
+
+                <Input
+                  label="Question"
+                  value={faqQuestion}
+                  onChange={(e) => setFaqQuestion(e.target.value)}
+                  placeholder={
+                    faqCategory === 'brands'
+                      ? 'e.g. How does the escrow protection work for hiring brands?'
+                      : 'e.g. When and how do creators receive payments?'
+                  }
+                  className="font-bold"
+                  required
+                />
+
+                <Textarea
+                  label="Answer"
+                  value={faqAnswer}
+                  onChange={(e) => setFaqAnswer(e.target.value)}
+                  placeholder="Provide a clear, helpful explanation..."
+                  rows={4}
+                  required
+                />
+              </div>
+            </Modal>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: BRAND ASSETS & DIRECT FILE UPLOADS */}
+      {activeTab === 'branding' && (
+        <div className="space-y-6 max-w-4xl">
+          {brandNotice && <Notice kind={brandNotice.kind} text={brandNotice.text} />}
+
+          {isSiteLoading ? (
+            <LoadingBlock />
+          ) : (
+          <Card className="p-6 space-y-6">
+            <div className="border-b border-neutral-100 pb-3">
+              <h3 className="text-sm font-extrabold text-neutral-900">
+                Brand Identity
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ImageUploadBox
+                label="Logo"
+                value={logoDark}
+                onChange={(val) => {
+                  setLogoDark(val);
+                  setLogoLight(val);
+                }}
+                previewBg="light"
+                recommendedDimensions="SVG or PNG (400x100px)"
+              />
+
+              <ImageUploadBox
+                label="Favicon"
+                value={favicon}
+                onChange={setFavicon}
+                aspectRatio="square"
+                previewBg="light"
+                recommendedDimensions="32x32px or 64x64px"
+              />
+            </div>
+
+            {/* Homepage Messaging */}
+            <div className="pt-4 border-t border-neutral-100 space-y-3">
+              <h3 className="text-sm font-extrabold text-neutral-900">
+                Homepage Copy
+              </h3>
+
+              <Input
+                label="Hero Headline"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                className="font-bold text-xs"
+              />
+
+              <Textarea
+                label="Hero Subtitle"
+                value={subtitle}
+                onChange={(e) => setSubtitle(e.target.value)}
+                rows={2}
+              />
+
+              <Input
+                label="Support Email"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                className="font-bold text-xs"
+              />
+            </div>
+
+            {/* Social Media Links Section */}
+            <div className="pt-6 border-t border-neutral-100 space-y-4">
+              <div>
+                <h3 className="text-sm font-extrabold text-neutral-900 flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-brand-black" />
+                  <span>Official Social Media Profiles</span>
+                </h3>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Direct profile links to your official brand channels. Displayed across the website header, footer, and emails.
+                </p>
+              </div>
+
+              {/* Fixed 5 Platforms List with Official Logos */}
+              <div className="space-y-3">
+                {OFFICIAL_SOCIAL_PLATFORMS.map((platform) => {
+                  const currentUrl = socialLinks[platform.key];
+                  const hasUrl = Boolean(currentUrl && currentUrl.trim().length > 0);
+
+                  return (
+                    <div
+                      key={platform.key}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-neutral-50/70 border border-neutral-200 rounded-xl hover:bg-neutral-50 hover:border-neutral-300 transition-all gap-3"
+                    >
+                      <div className="flex items-center gap-3 sm:w-52 shrink-0">
+                        {platform.badge}
+                        <div className="flex flex-col justify-center min-w-0">
+                          <span className="text-xs font-bold text-neutral-950 leading-tight block">{platform.name}</span>
+                          <span className="text-[11px] text-neutral-400 font-medium font-mono leading-tight mt-0.5 truncate block">{platform.handleHint}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
+                          {hasUrl ? (
+                            <div className="flex items-center gap-2 bg-white border border-neutral-200 px-3.5 py-2 rounded-xl shadow-2xs">
+                              <span className="text-xs font-mono text-neutral-800 font-semibold truncate flex-1" title={currentUrl}>
+                                {currentUrl}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="bg-white/60 border border-dashed border-neutral-200 px-3.5 py-2 rounded-xl text-xs text-neutral-400 italic">
+                              No URL configured yet
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="font-bold text-xs gap-1.5 text-neutral-800 hover:text-neutral-950 border-neutral-200 bg-white hover:bg-neutral-100 shadow-2xs cursor-pointer"
+                            onClick={() => handleOpenEditSocial(platform.key)}
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-neutral-600" />
+                            <span>Edit Link</span>
+                          </Button>
+
+                          {hasUrl ? (
+                            <a
+                              href={currentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Visit official ${platform.name} channel`}
+                              className="p-2 rounded-lg border border-neutral-200 hover:border-brand-black text-neutral-500 hover:text-brand-black bg-white hover:bg-neutral-100 transition-all shrink-0 cursor-pointer"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <div
+                              title="No link configured"
+                              className="p-2 rounded-lg border border-transparent text-neutral-300 bg-transparent shrink-0 cursor-not-allowed"
+                            >
+                              <ExternalLink className="w-4 h-4 opacity-30" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 flex justify-end">
+              <Button
+                variant="accent"
+                size="sm"
+                className="font-bold text-xs"
+                onClick={handleSaveBrand}
+                isLoading={isSavingSite}
+                leftIcon={<Save className="w-3.5 h-3.5" />}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </Card>
+          )}
+
+          {/* Edit Official Social Link Modal */}
+          {editingSocialKey && (
+            <Modal
+              isOpen={true}
+              onClose={() => setEditingSocialKey(null)}
+              title={
+                <div className="flex items-center gap-2.5">
+                  {OFFICIAL_SOCIAL_PLATFORMS.find((p) => p.key === editingSocialKey)?.badge}
+                  <span>
+                    Edit {OFFICIAL_SOCIAL_PLATFORMS.find((p) => p.key === editingSocialKey)?.name} Link
+                  </span>
+                </div>
+              }
+              description="Enter your official brand channel URL to display across website header, footer, and emails."
+              maxWidth="md"
+              footer={
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingSocialKey(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="accent"
+                    size="sm"
+                    className="font-bold"
+                    onClick={handleSaveSocialModal}
+                    isLoading={isSavingSite}
+                  >
+                    Save Link
+                  </Button>
+                </>
+              }
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleSaveSocialModal();
+                }}
+                className="space-y-4"
+              >
+                <Input
+                  label="Official Profile URL"
+                  type="url"
+                  value={tempSocialUrl}
+                  onChange={(e) => setTempSocialUrl(e.target.value)}
+                  placeholder={
+                    OFFICIAL_SOCIAL_PLATFORMS.find((p) => p.key === editingSocialKey)?.placeholder ||
+                    'https://...'
+                  }
+                  helperText={`Example: ${OFFICIAL_SOCIAL_PLATFORMS.find((p) => p.key === editingSocialKey)?.placeholder}`}
+                  autoFocus
+                />
+
+                {tempSocialUrl.trim().length > 0 && (
+                  <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl flex items-center justify-between text-xs">
+                    <span className="text-neutral-500 font-medium">Link Preview Test:</span>
+                    <a
+                      href={tempSocialUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-neutral-900 hover:text-brand-pink flex items-center gap-1"
+                    >
+                      <span>Test Link</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
+              </form>
+            </Modal>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
