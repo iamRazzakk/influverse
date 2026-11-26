@@ -1,0 +1,790 @@
+'use client';
+
+import React, { useState, useMemo, useEffect, useRef, useTransition, Suspense } from 'react';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { http } from '@/lib/api/client';
+import { publicEndpoints } from '@/lib/api/endpoints/public';
+import { useRequest } from '@/lib/hooks/useRequest';
+import type { Paginated } from '@/lib/api/types';
+import type { CreatorCardData } from '@/lib/api/endpoints/public';
+import { searchApiParams } from './searchQuery';
+import { useDebouncedValue } from '@/components/shared/useDebouncedValue';
+import { avatarFallback, labelize } from '@/components/shared/creatorFormat';
+import type { CreatorSort } from '@/types/public';
+import { CreatorCard, CreatorListRow } from '@/components/shared/CreatorCard';
+import { VerifiedBadge } from '@/components/shared/VerifiedBadge';
+import { InstagramLogo, TikTokLogo, YouTubeLogo } from '@/components/shared/SocialLogos';
+import { CategoryIcon } from '@/components/shared/CategoryIcon';
+import {
+  Search,
+  Instagram,
+  Youtube,
+  ArrowUpDown,
+  RotateCcw,
+  ChevronDown,
+  Globe,
+  Film,
+  Check,
+  X,
+  LayoutGrid,
+  List,
+  Users,
+} from 'lucide-react';
+import { Pagination } from 'antd';
+import { RemoteImage } from '@/components/shared/RemoteImage';
+
+interface SearchViewProps {
+  /**
+   * Page 1 / "relevance" results for the URL's search (GET /creators), rendered on the server.
+   * null = the request failed.
+   */
+  initialResults: Paginated<CreatorCardData> | null;
+  /** Category keys from GET /meta/options. */
+  creatorCategories: string[];
+  pageSize: number;
+}
+
+function SearchResultsContent({ initialResults, creatorCategories, pageSize }: SearchViewProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // URL changes re-render the server page; `isPending` dims the old results meanwhile.
+  const [isPending, startTransition] = useTransition();
+
+  // Search input state
+  const initialQuery = searchParams.get('q') || searchParams.get('search') || '';
+  const initialPlatform = searchParams.get('platform') || 'all';
+  const initialCategory = searchParams.get('category') || 'all';
+  const initialGender = searchParams.get('gender') || 'all';
+
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [platform, setPlatform] = useState(initialPlatform);
+  const [category, setCategory] = useState(initialCategory);
+  const [gender, setGender] = useState(initialGender);
+  const [sortBy, setSortBy] = useState<CreatorSort>('relevance');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Dropdown states for the in-page search bar
+  const [isPlatformOpen, setIsPlatformOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const platformDropdownRef = useRef<HTMLDivElement>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLDivElement>(null);
+
+  // Sync state when URL params change
+  useEffect(() => {
+    const q = searchParams.get('q') || searchParams.get('search') || '';
+    const plat = searchParams.get('platform') || 'all';
+    const cat = searchParams.get('category') || 'all';
+    const gen = searchParams.get('gender') || 'all';
+
+    setSearchQuery(q);
+    setPlatform(plat);
+    setCategory(cat);
+    setGender(gen);
+    setCurrentPage(1);
+  }, [searchParams]);
+
+  // Results come from GET /creators using the *submitted* search (URL), not the half-typed input.
+  // The server page already rendered page 1 sorted by relevance; other sorts / pages load in the browser.
+  const apiParams = searchApiParams(searchParams, { sort: sortBy, page: currentPage, limit: pageSize });
+  const usesServerResults = sortBy === 'relevance' && currentPage === 1;
+  const browserRequest = useRequest(
+    (signal) => publicEndpoints(http).searchCreators(apiParams, signal),
+    [JSON.stringify(apiParams)],
+    { skip: usesServerResults },
+  );
+  // While the first browser request runs, keep showing (dimmed) the server results, like before.
+  const resultPage = usesServerResults ? initialResults ?? undefined : browserRequest.data ?? initialResults ?? undefined;
+  const isFetching = isPending || (!usesServerResults && browserRequest.loading);
+  const isError = usesServerResults ? initialResults === null : Boolean(browserRequest.error);
+  const refetch = () => (usesServerResults ? router.refresh() : browserRequest.refetch());
+  const results = resultPage?.items ?? [];
+  const totalResults = resultPage?.meta.total ?? 0;
+
+  // Typeahead (GET /creators/suggest) for the in-page search box.
+  const debouncedQuery = useDebouncedValue(searchQuery.trim(), 250);
+  const { data: liveSuggestions = [] } = useRequest(
+    (signal) => publicEndpoints(http).suggestCreators(debouncedQuery, signal),
+    [debouncedQuery],
+    { skip: debouncedQuery.length < 1 },
+  );
+
+  // Click outside listener for dropdowns
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (platformDropdownRef.current && !platformDropdownRef.current.contains(event.target as Node)) {
+        setIsPlatformOpen(false);
+      }
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryOpen(false);
+      }
+      if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const platformOptions = [
+    {
+      value: 'all',
+      label: 'All Platforms',
+      icon: (
+        <span className="w-5 h-5 rounded-full bg-[#0A0A0A] flex items-center justify-center text-white shrink-0 shadow-2xs">
+          <Globe className="w-3 h-3 text-white" />
+        </span>
+      ),
+    },
+    {
+      value: 'instagram',
+      label: 'Instagram',
+      icon: <InstagramLogo circle className="w-5 h-5 shrink-0 shadow-2xs" />,
+    },
+    {
+      value: 'tiktok',
+      label: 'TikTok',
+      icon: <TikTokLogo circle className="w-5 h-5 shrink-0 shadow-2xs" />,
+    },
+    {
+      value: 'youtube',
+      label: 'YouTube',
+      icon: <YouTubeLogo circle className="w-5 h-5 shrink-0 shadow-2xs" />,
+    },
+  ];
+
+  const categoryOptions = [
+    { value: 'all', label: 'All Categories' },
+    ...creatorCategories.map((c) => ({ value: c, label: labelize(c) })),
+  ];
+
+  // Quick filter pills
+  const quickPills = [
+    { label: 'All Results', category: 'all', platform: 'all' },
+    ...creatorCategories.slice(0, 5).map((c) => ({ label: labelize(c), category: c, platform: 'all' })),
+    { label: 'Instagram', category: 'all', platform: 'instagram' },
+    { label: 'TikTok', category: 'all', platform: 'tiktok' },
+    { label: 'YouTube', category: 'all', platform: 'youtube' },
+  ];
+
+  // Execute in-page search
+  const handleExecuteSearch = (newQ?: string, newPlat?: string, newCat?: string, newGen?: string) => {
+    setShowSuggestions(false);
+    setIsPlatformOpen(false);
+    setIsCategoryOpen(false);
+
+    const qVal = newQ !== undefined ? newQ : searchQuery;
+    const platVal = newPlat !== undefined ? newPlat : platform;
+    const catVal = newCat !== undefined ? newCat : category;
+    const genVal = newGen !== undefined ? newGen : gender;
+
+    const params = new URLSearchParams();
+    if (qVal.trim()) params.set('q', qVal.trim());
+    if (platVal !== 'all') params.set('platform', platVal);
+    if (catVal !== 'all') params.set('category', catVal);
+    if (genVal !== 'all') params.set('gender', genVal);
+
+    startTransition(() => router.push(`/search?${params.toString()}`));
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setPlatform('all');
+    setCategory('all');
+    setGender('all');
+    setSortBy('relevance');
+    startTransition(() => router.push('/search'));
+  };
+
+  // Dynamic Page Title
+  const pageTitle = useMemo(() => {
+    if (searchQuery.trim()) {
+      return `Search results for "${searchQuery.trim()}"`;
+    }
+    const genderPrefix = gender === 'female' ? 'Female ' : gender === 'male' ? 'Male ' : '';
+    if (category !== 'all' && platform !== 'all') {
+      return `${genderPrefix}${labelize(category)} Creators on ${labelize(platform)}`;
+    }
+    if (category !== 'all') {
+      return `${genderPrefix}${labelize(category)} Creators`;
+    }
+    if (platform !== 'all') {
+      return `${genderPrefix}${labelize(platform)} Creators`;
+    }
+    if (gender !== 'all') {
+      return `${genderPrefix}Creators`;
+    }
+    return 'Search All Creators';
+  }, [searchQuery, category, platform, gender]);
+
+  const hasActiveFilters = searchQuery.trim() !== '' || platform !== 'all' || category !== 'all' || gender !== 'all';
+
+  return (
+    <div className="min-h-screen bg-[#FAFAF8] text-[#0A0A0A] font-sans">
+      {/* Top Banner & Interactive Search Refinement Bar */}
+      <section className="bg-white border-b border-[#E7E7E2] pt-8 pb-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#66665E]">
+            <Link href="/" className="hover:text-[#0A0A0A] transition-colors">
+              Home
+            </Link>
+            <span>/</span>
+            <Link href="/creators" className="hover:text-[#0A0A0A] transition-colors">
+              Creators
+            </Link>
+            <span>/</span>
+            <span className="text-[#0A0A0A] font-bold">Search Results</span>
+          </div>
+
+          {/* Primary Search Pill Bar */}
+          <div className="bg-[#FAFAF8] p-2 sm:p-2 rounded-2xl sm:rounded-full border border-[#E7E7E2] shadow-sm w-full max-w-4xl transition-all focus-within:border-[#0A0A0A] focus-within:bg-white relative z-30">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleExecuteSearch();
+              }}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0"
+            >
+              {/* 1. Keyword / Name Input */}
+              <div ref={searchInputRef} className="flex-1 flex items-center pl-3.5 pr-2 py-1 sm:py-1.5 w-full min-w-0 sm:min-w-[180px] relative">
+                <Search className="w-4 h-4 text-[#66665E] mr-2.5 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search by creator name, niche, bio, or tags..."
+                  value={searchQuery}
+                  onFocus={() => {
+                    if (searchQuery.trim()) setShowSuggestions(true);
+                  }}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  className="w-full bg-transparent text-sm font-semibold text-[#0A0A0A] placeholder:text-[#A3A39C] outline-none font-sans"
+                />
+
+                {searchQuery.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      handleExecuteSearch('');
+                    }}
+                    className="w-5 h-5 rounded-full hover:bg-[#E7E7E2] text-[#66665E] flex items-center justify-center mr-1 transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+
+                {/* Mobile Inline Submit Button */}
+                <button
+                  type="submit"
+                  className="sm:hidden w-8 h-8 bg-[#FF2D78] hover:bg-[#E01E69] text-white rounded-xl flex items-center justify-center shrink-0 ml-1.5 shadow-xs"
+                  aria-label="Search Creators"
+                >
+                  <Search className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+
+                {/* Instant Suggestions Dropdown */}
+                {showSuggestions && searchQuery.trim().length > 0 && (
+                  <div className="absolute top-full left-0 mt-3 w-[calc(100vw-3rem)] sm:w-[380px] bg-white rounded-2xl border border-[#E7E7E2] shadow-2xl p-3 z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#F4F4F0] px-1 text-xs font-bold uppercase tracking-wider text-[#66665E]">
+                      <span>Matching Creators</span>
+                      <span className="text-[#FF2D78]">Press Enter</span>
+                    </div>
+
+                    {liveSuggestions.length > 0 ? (
+                      <div className="space-y-1 pt-1.5">
+                        {liveSuggestions.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setShowSuggestions(false);
+                              router.push(`/creators/${c.handle || c.id}`);
+                            }}
+                            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-[#FAFAF8] transition-colors group cursor-pointer text-left"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <RemoteImage
+                                src={c.avatar || avatarFallback(c.name)}
+                                alt={c.name ?? ''}
+                                className="w-8 h-8 rounded-full object-cover border border-[#E7E7E2] shrink-0" width={64} height={64} sizes="32px" />
+                              <div className="min-w-0">
+                                <div className="text-xs font-black text-[#0A0A0A] flex items-center gap-1 group-hover:text-[#FF2D78] transition-colors">
+                                  <span className="truncate">{c.name}</span>
+                                  {c.verified && <VerifiedBadge size="xs" />}
+                                </div>
+                                <div className="text-sm text-[#66665E] truncate">
+                                  @{c.handle}{c.category ? ` • ${labelize(c.category)}` : ''}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-3 text-center text-sm text-[#66665E]">
+                        No direct matches. Press search for broader catalog.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Filter Controls: 2-col on mobile, inline on desktop */}
+              <div className="grid grid-cols-2 gap-1.5 pt-1.5 sm:pt-0 border-t border-[#E7E7E2] sm:border-t-0 sm:flex sm:items-center w-full sm:w-auto">
+                {/* Divider Line (Desktop only) */}
+                <div className="hidden sm:block w-px h-6 bg-[#E7E7E2] shrink-0 mx-1" />
+
+                {/* 2. Platform Selector Dropdown */}
+                <div ref={platformDropdownRef} className="relative shrink-0 sm:min-w-[130px] w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPlatformOpen(!isPlatformOpen);
+                      setIsCategoryOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl sm:rounded-full bg-white sm:bg-transparent hover:bg-white transition-colors cursor-pointer text-left border sm:border-0 border-[#E7E7E2]"
+                  >
+                    <div className="flex items-center min-w-0 mr-1">
+                      {platformOptions.find((p) => p.value === platform)?.icon}
+                      <span className="text-xs sm:text-sm font-extrabold text-[#0A0A0A] font-sans truncate ml-1.5">
+                        {platformOptions.find((p) => p.value === platform)?.label || 'All'}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#66665E] transition-transform duration-200 shrink-0 ${
+                        isPlatformOpen ? 'rotate-180 text-[#0A0A0A]' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {isPlatformOpen && (
+                    <div className="absolute top-full left-0 mt-2 sm:mt-3 w-52 sm:w-56 bg-white rounded-2xl border border-[#E7E7E2] shadow-2xl p-2 z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                      <div className="space-y-1">
+                        {platformOptions.map((opt) => {
+                          const isSelected = platform === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                setPlatform(opt.value);
+                                setIsPlatformOpen(false);
+                                handleExecuteSearch(undefined, opt.value, undefined);
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-left cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#0A0A0A] text-white shadow-xs'
+                                  : 'text-[#0A0A0A] hover:bg-[#F4F4F0]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                {opt.icon}
+                                <span>{opt.label}</span>
+                              </div>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider Line (Desktop only) */}
+                <div className="hidden sm:block w-px h-6 bg-[#E7E7E2] shrink-0 mx-1" />
+
+                {/* 3. Category Selector Dropdown */}
+                <div ref={categoryDropdownRef} className="relative shrink-0 sm:min-w-[140px] w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCategoryOpen(!isCategoryOpen);
+                      setIsPlatformOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl sm:rounded-full bg-white sm:bg-transparent hover:bg-white transition-colors cursor-pointer text-left border sm:border-0 border-[#E7E7E2]"
+                  >
+                    <div className="flex items-center min-w-0 mr-1">
+                      <span className="text-[#A3A39C] mr-1.5 text-xs font-black shrink-0 font-mono">::</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-[#0A0A0A] font-sans truncate">
+                        {categoryOptions.find((c) => c.value === category)?.label || 'Categories'}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#66665E] transition-transform duration-200 shrink-0 ${
+                        isCategoryOpen ? 'rotate-180 text-[#0A0A0A]' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {isCategoryOpen && (
+                    <div className="absolute top-full right-0 sm:left-auto sm:right-0 mt-2 sm:mt-3 w-56 sm:w-64 bg-white rounded-2xl border border-[#E7E7E2] shadow-2xl p-2 z-50 animate-in fade-in-0 zoom-in-95 duration-150 max-h-72 overflow-y-auto">
+                      <div className="space-y-1">
+                        {categoryOptions.map((opt) => {
+                          const isSelected = category === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                setCategory(opt.value);
+                                setIsCategoryOpen(false);
+                                handleExecuteSearch(undefined, undefined, opt.value);
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-left cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#0A0A0A] text-white shadow-xs'
+                                  : 'text-[#0A0A0A] hover:bg-[#F4F4F0]'
+                              }`}
+                            >
+                              <span>{opt.label}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Pink Submit Search Button (Desktop only) */}
+                <button
+                  type="submit"
+                  className="hidden sm:flex w-10 h-10 bg-[#FF2D78] hover:bg-[#E01E69] text-white rounded-full items-center justify-center transition-all duration-300 shrink-0 cursor-pointer shadow-sm hover:scale-105 active:scale-95 ml-1"
+                  aria-label="Search Creators"
+                >
+                  <Search className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Quick Filter Tag Pills */}
+          <div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto overscroll-x-contain pb-1 no-scrollbar text-xs">
+            <span className="text-[#66665E] font-bold uppercase tracking-wider text-xs shrink-0 mr-1">
+              Popular:
+            </span>
+            {quickPills.map((pill) => {
+              const isActive =
+                (pill.category === 'all' && pill.platform === 'all' && category === 'all' && platform === 'all') ||
+                (pill.category !== 'all' && category === pill.category) ||
+                (pill.platform !== 'all' && platform === pill.platform);
+
+              return (
+                <button
+                  key={pill.label}
+                  type="button"
+                  onClick={() => {
+                    setCategory(pill.category);
+                    setPlatform(pill.platform);
+                    handleExecuteSearch(undefined, pill.platform, pill.category);
+                  }}
+                  className={`px-3 py-1.5 rounded-full font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 border ${
+                    isActive
+                      ? 'bg-[#0A0A0A] text-white border-[#0A0A0A] shadow-2xs'
+                      : 'bg-[#FAFAF8] text-[#555550] border-[#E7E7E2] hover:border-[#0A0A0A] hover:bg-white hover:text-[#0A0A0A]'
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Main Results Container */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {/* Results Metadata Bar: Title, Count, Active Filters & Sorting Controls */}
+        <div className="space-y-4 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-[#0A0A0A] tracking-tight">
+                {pageTitle}
+              </h1>
+              <p className="text-sm font-medium text-[#66665E] mt-1">
+                Showing{' '}
+                <span className="font-extrabold text-[#0A0A0A]">
+                  {totalResults.toLocaleString()}
+                </span>{' '}
+                verified creators ready for brand collaborations
+              </p>
+            </div>
+
+            {/* Sorting & Layout Switcher */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-start md:self-auto w-full md:w-auto">
+              {/* Gender Filter Dropdown */}
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-[#E7E7E2] shadow-2xs">
+                <Users className="w-3.5 h-3.5 text-[#66665E]" />
+                <span className="text-xs sm:text-sm font-bold text-[#66665E]">Gender:</span>
+                <select
+                  value={gender}
+                  onChange={(e) => {
+                    setGender(e.target.value);
+                    handleExecuteSearch(undefined, undefined, undefined, e.target.value);
+                  }}
+                  className="bg-transparent text-xs sm:text-sm font-bold text-[#0A0A0A] outline-none cursor-pointer pr-1"
+                >
+                  <option value="all">All Genders</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* Sort By Dropdown */}
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-[#E7E7E2] shadow-2xs">
+                <ArrowUpDown className="w-3.5 h-3.5 text-[#66665E]" />
+                <span className="text-xs sm:text-sm font-bold text-[#66665E]">Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value as CreatorSort);
+                    setCurrentPage(1);
+                  }}
+                  className="bg-transparent text-xs sm:text-sm font-bold text-[#0A0A0A] outline-none cursor-pointer pr-1"
+                >
+                  <option value="relevance">Most Relevant</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="followers">Most Followers</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                  <option value="newest">Newest</option>
+                </select>
+              </div>
+
+              {/* View Layout Toggle */}
+              <div className="flex items-center bg-white p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-[#E7E7E2] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-lg sm:rounded-xl transition-all cursor-pointer ${
+                    viewMode === 'grid'
+                      ? 'bg-[#0A0A0A] text-white shadow-2xs'
+                      : 'text-[#66665E] hover:text-[#0A0A0A]'
+                  }`}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded-lg sm:rounded-xl transition-all cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-[#0A0A0A] text-white shadow-2xs'
+                      : 'text-[#66665E] hover:text-[#0A0A0A]'
+                  }`}
+                  title="List View"
+                >
+                  <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Filter Chips */}
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              <span className="text-sm font-bold text-[#66665E]">Active filters:</span>
+
+              {searchQuery.trim() && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E7E7E2] text-sm font-bold text-[#0A0A0A] shadow-2xs">
+                  <span>Query: &ldquo;{searchQuery}&rdquo;</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      handleExecuteSearch('');
+                    }}
+                    className="hover:text-rose-500 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {platform !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E7E7E2] text-sm font-bold text-[#0A0A0A] shadow-2xs">
+                  <span>Platform: {platformOptions.find((p) => p.value === platform)?.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPlatform('all');
+                      handleExecuteSearch(undefined, 'all', undefined);
+                    }}
+                    className="hover:text-rose-500 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {category !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E7E7E2] text-sm font-bold text-[#0A0A0A] shadow-2xs">
+                  <span>Category: {categoryOptions.find((c) => c.value === category)?.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategory('all');
+                      handleExecuteSearch(undefined, undefined, 'all');
+                    }}
+                    className="hover:text-rose-500 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {gender !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E7E7E2] text-sm font-bold text-[#0A0A0A] shadow-2xs">
+                  <span>Gender: {gender === 'female' ? 'Female' : gender === 'male' ? 'Male' : 'Other'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGender('all');
+                      handleExecuteSearch(undefined, undefined, undefined, 'all');
+                    }}
+                    className="hover:text-rose-500 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="text-sm font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer ml-1"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Results Grid or List */}
+        {isFetching && !resultPage ? (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 rounded-full border-2 border-[#0A0A0A] border-t-transparent animate-spin" />
+          </div>
+        ) : isError ? (
+          <div className="bg-white rounded-3xl border border-[#E7E7E2] p-10 text-center max-w-2xl mx-auto space-y-4 shadow-2xs">
+            <h3 className="text-xl font-extrabold text-[#0A0A0A]">Couldn&apos;t load creators</h3>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="h-10 px-5 rounded-full bg-[#0A0A0A] text-white text-sm font-bold"
+            >
+              Try again
+            </button>
+          </div>
+        ) : results.length > 0 ? (
+          viewMode === 'grid' ? (
+            <div className={`grid grid-cols-2 gap-2.5 sm:gap-5 md:grid-cols-3 lg:gap-6 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+              {results.map((creator) => (
+                <CreatorCard key={creator.id} creator={creator} />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {results.map((creator) => (
+                <CreatorListRow key={creator.id} creator={creator} />
+              ))}
+            </div>
+          )
+        ) : (
+          /* Empty Search State with Actionable Guidance */
+          <div className="bg-white rounded-3xl border border-[#E7E7E2] p-10 sm:p-16 text-center max-w-2xl mx-auto space-y-6 shadow-2xs">
+            <div className="w-16 h-16 rounded-full bg-[#FAF6E8] text-[#8C6819] flex items-center justify-center mx-auto shadow-inner">
+              <Search className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-2xl font-extrabold text-[#0A0A0A] tracking-tight">
+                No creators matched your search criteria
+              </h3>
+              <p className="text-sm text-[#66665E] max-w-md mx-auto leading-relaxed">
+                We couldn&apos;t find any verified creators matching &ldquo;{searchQuery || platform || category}&rdquo;. Try broadening your keywords or removing some filters.
+              </p>
+            </div>
+
+            {/* Quick Explore Categories */}
+            <div className="space-y-3 pt-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#66665E]">
+                Explore Popular Categories:
+              </span>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {creatorCategories.slice(0, 5).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCategory(cat);
+                      setPlatform('all');
+                      handleExecuteSearch('', 'all', cat);
+                    }}
+                    className="px-4 py-2 rounded-full bg-[#FAFAF8] border border-[#E7E7E2] hover:border-[#0A0A0A] hover:bg-white text-sm font-bold text-[#0A0A0A] transition-all cursor-pointer"
+                  >
+                    {labelize(cat)} Creators
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-[#F4F4F0]">
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="h-11 px-6 rounded-full bg-[#0A0A0A] hover:bg-zinc-800 text-white text-sm font-bold transition-all inline-flex items-center gap-2 cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset All Filters & View All</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalResults > pageSize && (
+          <div className="pt-12 flex justify-center">
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={totalResults}
+              onChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              showSizeChanger={false}
+              className="font-bold"
+            />
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+/** /search UI. First results come from the server page (props); the search bar changes the URL. */
+export function SearchView(props: SearchViewProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-8">
+          <div className="w-8 h-8 rounded-full border-2 border-[#0A0A0A] border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <SearchResultsContent {...props} />
+    </Suspense>
+  );
+}

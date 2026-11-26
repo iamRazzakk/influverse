@@ -1,0 +1,211 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Briefcase, Camera, ArrowUpRight, Compass } from 'lucide-react';
+import { RemoteImage } from '@/components/shared/RemoteImage';
+
+export default function AboutPage() {
+  return (
+    <div className="bg-[#FAFAF8] text-[#0A0A0A] font-sans min-h-screen">
+      {/* 1. HERO SECTION */}
+      <section className="pt-8 sm:pt-16 pb-10 sm:pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Label Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white border border-[#E7E7E2] text-[11px] sm:text-sm font-bold text-[#0A0A0A] shadow-2xs mb-4 sm:mb-6">
+          <Compass className="w-3.5 h-3.5 text-[#FF2D78]" />
+          <span className="tracking-wider uppercase">About Influverse</span>
+        </div>
+
+        {/* Split Headline & Description */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-12 items-start mb-5 sm:mb-12">
+          <div className="min-w-0 lg:col-span-8">
+            <h1 className="text-[1.625rem] sm:text-5xl lg:text-[56px] font-black text-[#0A0A0A] tracking-tight leading-[1.15] break-words">
+              Good work starts with the right connection.
+            </h1>
+          </div>
+          <div className="min-w-0 lg:col-span-4 lg:pt-2">
+            <p className="text-sm sm:text-lg text-[#66665E] font-medium leading-relaxed sm:leading-[28px]">
+              We bring brands and creators together to turn shared ideas into meaningful content.
+            </p>
+          </div>
+        </div>
+
+        {/* Hero Photographic Banner */}
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-[#E7E7E2] shadow-sm bg-zinc-900 h-[200px] sm:h-[460px] lg:h-[540px]">
+          <Image
+            src="/images/about-influverse-collaboration.png"
+            alt="A content creator filming while her creative team reviews the campaign"
+            fill
+            priority
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) calc(100vw - 3rem), 1280px"
+            className="object-cover object-center"
+          />
+        </div>
+      </section>
+
+      {/* 2. WHY WE BUILT INFLUVERSE */}
+      <section className="py-12 sm:py-24 border-y border-[#E7E7E2] bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-12 items-center">
+            <div className="min-w-0 lg:col-span-5">
+              <h2 className="text-[1.625rem] sm:text-4xl lg:text-[44px] font-black text-[#0A0A0A] tracking-tight leading-[1.15]">
+                Why we built Influverse
+              </h2>
+            </div>
+            <div className="min-w-0 lg:col-span-7 lg:border-l lg:border-[#E7E7E2] lg:pl-12">
+              <h3 className="text-base sm:text-2xl font-extrabold text-[#0A0A0A] mb-2 sm:mb-3">
+                Finding the right collaborator should feel simple.
+              </h3>
+              <p className="text-sm sm:text-lg text-[#66665E] font-medium leading-relaxed sm:leading-[28px]">
+                Influverse brings creator discovery, clear offers and content delivery into one place—so both sides know what comes next.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. BUILT FOR BOTH SIDES */}
+      <section className="py-12 sm:py-28 bg-[#FAFAF8]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-[1.625rem] sm:text-4xl lg:text-[44px] font-black text-[#0A0A0A] tracking-tight mb-6 sm:mb-16">
+            Built for both sides.
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+            {/* Card 1: For brands */}
+            <div className="group">
+              <div className="h-36 sm:h-72 lg:h-80 rounded-2xl sm:rounded-3xl overflow-hidden mb-3 sm:mb-6 border border-[#E7E7E2] bg-zinc-100 shadow-2xs">
+                <RemoteImage
+                  src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1000&q=80"
+                  alt="Brand discussing creative strategy and deliverables"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" width={800} height={800} sizes="(min-width: 1024px) 50vw, 100vw" />
+              </div>
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white border border-[#E7E7E2] flex items-center justify-center text-[#0A0A0A] shrink-0 mt-0.5 shadow-2xs">
+                  <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-[#0A0A0A]" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-2xl font-black text-[#0A0A0A] mb-1 sm:mb-2">
+                    For brands
+                  </h3>
+                  <p className="text-xs sm:text-base text-[#66665E] font-medium leading-relaxed sm:leading-[26px] mb-2.5 sm:mb-4">
+                    Find creators who fit your brand. Agree on the brief, review the work and keep everything organised.
+                  </p>
+                  <Link
+                    href="/creators"
+                    className="text-xs sm:text-sm font-bold text-[#0A0A0A] hover:text-[#FF2D78] inline-flex items-center gap-1.5 transition-colors group/link"
+                  >
+                    <span>Explore creators</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: For creators */}
+            <div className="group">
+              <div className="h-36 sm:h-72 lg:h-80 rounded-2xl sm:rounded-3xl overflow-hidden mb-3 sm:mb-6 border border-[#E7E7E2] bg-zinc-100 shadow-2xs">
+                <RemoteImage
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80"
+                  alt="Creator filming professional content"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" width={800} height={800} sizes="(min-width: 1024px) 50vw, 100vw" />
+              </div>
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white border border-[#E7E7E2] flex items-center justify-center text-[#0A0A0A] shrink-0 mt-0.5 shadow-2xs">
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-[#0A0A0A]" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-2xl font-black text-[#0A0A0A] mb-1 sm:mb-2">
+                    For creators
+                  </h3>
+                  <p className="text-xs sm:text-base text-[#66665E] font-medium leading-relaxed sm:leading-[26px] mb-2.5 sm:mb-4">
+                    Show your work, set your packages and manage collaborations with clarity.
+                  </p>
+                  <Link
+                    href="/register?role=creator"
+                    className="text-xs sm:text-sm font-bold text-[#0A0A0A] hover:text-[#FF2D78] inline-flex items-center gap-1.5 transition-colors group/link"
+                  >
+                    <span>Join as a creator</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. CLEAR FROM THE START */}
+      <section className="py-10 sm:py-20 bg-[#F4F4F0] border-y border-[#E7E7E2]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-12 items-start">
+            <div className="min-w-0 lg:col-span-4">
+              <h2 className="text-xl sm:text-4xl lg:text-[44px] font-black text-[#0A0A0A] tracking-tight leading-[1.15]">
+                Clear from the start.
+              </h2>
+            </div>
+            <div className="min-w-0 lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <div className="min-w-0 bg-white sm:bg-transparent p-3.5 sm:p-0 rounded-2xl sm:rounded-none border sm:border-0 border-[#E7E7E2]">
+                <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#FF2D78] uppercase mb-1 sm:mb-2.5 block">
+                  01
+                </span>
+                <h3 className="text-sm sm:text-xl lg:text-2xl font-extrabold text-[#0A0A0A] mb-0.5 break-words">
+                  Clear expectations
+                </h3>
+                <p className="text-xs sm:text-sm text-[#66665E] font-medium leading-relaxed">
+                  Agree on scope, price and timing.
+                </p>
+              </div>
+              <div className="min-w-0 bg-white sm:bg-transparent p-3.5 sm:p-0 rounded-2xl sm:rounded-none border sm:border-0 border-[#E7E7E2]">
+                <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#FF2D78] uppercase mb-1 sm:mb-2.5 block">
+                  02
+                </span>
+                <h3 className="text-sm sm:text-xl lg:text-2xl font-extrabold text-[#0A0A0A] mb-0.5 break-words">
+                  Shared visibility
+                </h3>
+                <p className="text-xs sm:text-sm text-[#66665E] font-medium leading-relaxed">
+                  Keep feedback and delivery together.
+                </p>
+              </div>
+              <div className="min-w-0 bg-white sm:bg-transparent p-3.5 sm:p-0 rounded-2xl sm:rounded-none border sm:border-0 border-[#E7E7E2]">
+                <span className="text-[10px] sm:text-xs font-black tracking-widest text-[#FF2D78] uppercase mb-1 sm:mb-2.5 block">
+                  03
+                </span>
+                <h3 className="text-sm sm:text-xl lg:text-2xl font-extrabold text-[#0A0A0A] mb-0.5 break-words">
+                  Creative respect
+                </h3>
+                <p className="text-xs sm:text-sm text-[#66665E] font-medium leading-relaxed">
+                  Build around the work and the people behind it.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. MAKE YOUR NEXT CONNECTION CTA */}
+      <section className="py-12 sm:py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-5 sm:gap-8">
+            <h2 className="text-[1.625rem] sm:text-4xl lg:text-5xl font-black text-[#0A0A0A] tracking-tight text-center sm:text-left">
+              Make your next connection.
+            </h2>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <Link href="/creators" className="w-full sm:w-auto">
+                <button className="w-full sm:w-auto h-12 px-8 rounded-full bg-[#0A0A0A] hover:bg-[#FF2D78] text-white font-bold text-sm sm:text-base shadow-sm transition-all inline-flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95">
+                  Find Creators
+                </button>
+              </Link>
+              <Link href="/register?role=creator" className="w-full sm:w-auto">
+                <button className="w-full sm:w-auto h-12 px-8 rounded-full bg-white border border-[#E7E7E2] hover:border-[#0A0A0A] text-[#0A0A0A] font-bold text-sm sm:text-base shadow-2xs transition-all inline-flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95">
+                  Join as Creator
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,27 @@
+# Docs (kept local, not pushed)
+docs/
+
+# Load / socket benchmarks: local test tooling + generated output with live tokens (kept local, not pushed)
+server/bench/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+out/
+.next/
+
+# Environment / secrets (all folders)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs & OS junk
+*.log
+.DS_Store
+Thumbs.db

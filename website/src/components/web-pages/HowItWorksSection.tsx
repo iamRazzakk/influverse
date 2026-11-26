@@ -1,0 +1,194 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Search, Send, CheckCircle2, ShieldCheck, CreditCard, Package, Video, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui';
+
+export function HowItWorksSection() {
+  const [activeTab, setActiveTab] = useState<'brand' | 'creator'>('brand');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tabParam = searchParams.get('tab') || searchParams.get('role');
+      if (tabParam === 'creator' || tabParam === 'creators' || window.location.hash === '#creators') {
+        setActiveTab('creator');
+      } else if (tabParam === 'brand' || tabParam === 'brands' || window.location.hash === '#brands') {
+        setActiveTab('brand');
+      }
+
+      // Ensure first view is at the top with Navbar visible
+      if (window.location.hash === '#creators' || window.location.hash === '#brands') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+
+      const handleHashChange = () => {
+        if (window.location.hash === '#creators') {
+          setActiveTab('creator');
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        } else if (window.location.hash === '#brands') {
+          setActiveTab('brand');
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+      };
+      window.addEventListener('hashchange', handleHashChange);
+      return () => window.removeEventListener('hashchange', handleHashChange);
+    }
+  }, []);
+
+  const brandSteps = [
+    {
+      step: '01',
+      title: 'Discover & Shortlist',
+      desc: 'Filter verified creators across Instagram, TikTok, and YouTube by audience size, engagement, niche, and transparent package pricing in EUR (€).',
+      icon: Search,
+      badge: 'Step 1',
+    },
+    {
+      step: '02',
+      title: 'Send Offer & Escrow Deposit',
+      desc: 'Select a package or define a custom brief. Pay creator base price + 15% platform fee into secure escrow. Creator gets 48 hours to accept.',
+      icon: CreditCard,
+      badge: 'Step 2',
+    },
+    {
+      step: '03',
+      title: 'Review Draft & Approve',
+      desc: 'Collaborate via direct order messaging. Review uploaded deliverables, request minor adjustments, or approve with one click.',
+      icon: Video,
+      badge: 'Step 3',
+    },
+    {
+      step: '04',
+      title: 'Escrow Released & Post Live',
+      desc: 'Once approved, the creator publishes the content or delivers raw files, and escrow funds are safely released to the creator wallet.',
+      icon: ShieldCheck,
+      badge: 'Step 4',
+    },
+  ];
+
+  const creatorSteps = [
+    {
+      step: '01',
+      title: 'Set Up Your Rate Card',
+      desc: 'Create preset packages for Stories, Reels, TikToks, and UGC with your exact EUR prices, delivery timelines, and revision allowances.',
+      icon: Package,
+      badge: 'Step 1',
+    },
+    {
+      step: '02',
+      title: 'Receive Funded Offers',
+      desc: 'Get notified of incoming brand offers with pre-funded escrow deposits. Review campaign briefs, deadlines, and accept or counter.',
+      icon: Send,
+      badge: 'Step 2',
+    },
+    {
+      step: '03',
+      title: 'Create & Submit Content',
+      desc: 'Produce high-quality content following the agreed brief. Upload draft video previews or Google Drive links directly to the order workspace.',
+      icon: Video,
+      badge: 'Step 3',
+    },
+    {
+      step: '04',
+      title: 'Get Paid Instantly',
+      desc: 'Upon brand approval, receive 100% of your listed creator price directly to your balance with zero hidden deductions on your end.',
+      icon: CheckCircle2,
+      badge: 'Step 4',
+    },
+  ];
+
+  const currentSteps = activeTab === 'brand' ? brandSteps : creatorSteps;
+
+  return (
+    <section id="how-it-works" className="py-16 sm:py-20 lg:py-28 bg-[#FAFAF8]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-4xl lg:text-[48px] font-black text-[#0A0A0A] tracking-tight leading-[1.15] font-sans">
+            How Influverse{' '}
+            <span className="font-editorial italic font-normal text-[#0A0A0A]">
+              Works
+            </span>
+          </h2>
+          <p className="text-sm sm:text-base lg:text-[18px] leading-relaxed sm:leading-[28px] text-[#66665E] font-sans font-medium mt-2 sm:mt-4 mb-6 sm:mb-8">
+            A seamless, protected four-step workflow built on transparent escrow and verified delivery.
+          </p>
+
+          {/* Interactive Dual Perspective Toggle */}
+          <div className="inline-flex p-1 rounded-full bg-white border border-[#E7E7E2] shadow-xs max-w-full">
+            <button
+              onClick={() => setActiveTab('brand')}
+              className={`px-3.5 sm:px-7 py-2 sm:py-2.5 rounded-full font-outfit font-bold text-xs sm:text-[15px] transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'brand'
+                  ? 'bg-[#0A0A0A] text-[#FAFAFA] shadow-sm'
+                  : 'text-[#66665E] hover:text-[#0A0A0A]'
+              }`}
+            >
+              For Brands
+            </button>
+            <button
+              onClick={() => setActiveTab('creator')}
+              className={`px-3.5 sm:px-7 py-2 sm:py-2.5 rounded-full font-outfit font-bold text-xs sm:text-[15px] transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'creator'
+                  ? 'bg-[#FF2D78] text-[#FAFAFA] shadow-sm'
+                  : 'text-[#66665E] hover:text-[#0A0A0A]'
+              }`}
+            >
+              For Creators
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Steps Grid: 1 column on mobile for spacious readability, 2 on tablet, 4 on desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-5 lg:gap-6">
+          {currentSteps.map((step, idx) => {
+            const Icon = step.icon;
+            return (
+              <div
+                key={idx}
+                className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-6 lg:p-7 border border-[#E7E7E2] flex flex-col justify-between hover:border-[#0A0A0A] hover:shadow-xl sm:hover:-translate-y-1 transition-all duration-300 relative group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3.5 sm:mb-5">
+                    <span className="font-sans text-2xl sm:text-2xl lg:text-3xl font-black text-[#D2D2CA] group-hover:text-[#0A0A0A] transition-colors tracking-tight leading-none">
+                      {step.step}
+                    </span>
+                    <div className="w-10 h-10 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-xl sm:rounded-2xl bg-[#F4F4F0] text-[#0A0A0A] flex items-center justify-center sm:group-hover:scale-105 transition-transform shadow-2xs">
+                      <Icon className="w-4.5 h-4.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
+                    </div>
+                  </div>
+                  <h3 className="text-base sm:text-lg lg:text-xl font-bold sm:font-extrabold text-[#0A0A0A] mb-2 font-sans leading-snug">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-[#555550] leading-relaxed font-sans font-medium">
+                    {step.desc}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 sm:mt-5 sm:pt-3.5 border-t border-[#F4F4F0]">
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#66665E] font-sans">
+                    {step.badge}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* CTA Banner Bottom */}
+        <div className="mt-12 sm:mt-18 text-center">
+          <Button
+            href={activeTab === 'brand' ? '/creators' : '/register'}
+            size="lg"
+            variant="primary"
+            iconRight={<ArrowRight className="w-4 h-4" />}
+          >
+            {activeTab === 'brand' ? 'Start Browsing Creators' : 'Apply as a Creator'}
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,79 @@
+# Local / single-host stack.
+# Production (to avoid single points of failure): managed MongoDB replica set (3 nodes, e.g. Atlas),
+# managed Redis with failover, api >= 2 instances behind a load balancer, worker >= 1 (2 is better).
+name: influverse
+
+x-app: &app
+  build: .
+  env_file:
+    - .env
+  environment:
+    - DATABASE_URL=mongodb://mongodb:27017/influverse?replicaSet=rs0
+    - REDIS_URL=redis://redis:6379
+  depends_on:
+    mongodb:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  api:
+    <<: *app
+    container_name: influverse-api
+    command: ["node", "dist/server.js"]
+    ports:
+      - "9999:9999"
+
+  worker:
+    <<: *app
+    container_name: influverse-worker
+    command: ["node", "dist/worker.js"]
+    # Worker has no HTTP
+    healthcheck:
+      disable: true
+
+  redis:
+    image: redis:7-alpine
+    container_name: influverse-redis
+    # AOF on — queue jobs survive restarts. Eviction off for BullMQ.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Single-node replica set — Mongo transactions (escrow / ledger) require a replica set
+  mongodb:
+    image: mongo:7
+    container_name: influverse-mongodb
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      # Initiates the replica set the first time; afterwards only checks status
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }).ok }",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  redisdata:
+  mongodata:

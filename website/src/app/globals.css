@@ -1,0 +1,1065 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: var(--font-red-hat), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-red-hat), system-ui, sans-serif;
+  --font-outfit: var(--font-red-hat), system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
+
+  /* Color System Tokens */
+  --bg-canvas: #FAFAF8;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F4F4F0;
+  --border-default: #E7E7E2;
+  --border-strong: #D2D2CA;
+  --text-primary: #0A0A0A;
+  --text-secondary: #66665E;
+  --text-body: #44443E;
+  --accent-pink: #FF2D78;
+  --accent-green: #23744D;
+  --accent-green-bg: #EEF7F2;
+
+  /* Grid & Radius Design Tokens */
+  --radius-container: 28px;
+  --radius-card: 20px;
+  --radius-input: 14px;
+  --radius-inner: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 9999px;
+  --max-w-page: 1152px;
+  --max-w-wide: 1600px;
+
+  /* Button Height Standards */
+  --btn-h-lg: 48px;
+  --btn-h-md: 40px;
+  --btn-h-sm: 32px;
+
+  /* Typography. Desktop caps match the previous fixed scale. Phones use the minimum. */
+  --type-display: clamp(1.65rem, 1rem + 2.8vw, 3.5rem);
+  --type-page: clamp(1.45rem, 0.95rem + 2.2vw, 2.5rem);
+  --type-section: clamp(1.25rem, 0.9rem + 1.6vw, 1.85rem);
+  --type-card: clamp(1.05rem, 0.95rem + 0.7vw, 1.25rem);
+  --type-body: 0.9375rem;
+  --type-label: 0.75rem;
+  --type-meta: 0.6875rem;
+
+  /* Cards. Phones stay compact; desktop padding and radius return below. */
+  --card-pad: 1rem;
+  --card-radius: 1.125rem;
+  --card-gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --type-body: 1rem;
+    --card-pad: 1.75rem;
+    --card-radius: 1.75rem;
+    --card-gap: 1.5rem;
+  }
+}
+
+/* Accessibility Focus Rings (WCAG 2.2 AA) */
+:focus-visible {
+  outline: 2px solid #0A0A0A;
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #0A0A0A;
+  outline-offset: 2px;
+}
+
+/* Accessible High-Contrast Selection (Clearly visible on both light and dark backgrounds) */
+::selection {
+  background-color: #FF2D78 !important;
+  color: #FFFFFF !important;
+}
+
+::-moz-selection {
+  background-color: #FF2D78 !important;
+  color: #FFFFFF !important;
+}
+
+/* Accessible High-Contrast Placeholders (WCAG 2.2 AA compliant, contrast > 5.5:1) */
+::placeholder,
+input::placeholder,
+textarea::placeholder,
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder,
+.ant-select-selection-placeholder {
+  color: #66665E !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #66665E !important;
+}
+
+/* Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  font-family: var(--font-sans);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-outfit {
+  font-family: var(--font-sans);
+}
+
+/* Editorial Serif Accents matching DesignMonk typography */
+.font-editorial {
+  font-family: var(--font-serif);
+  font-style: italic;
+  letter-spacing: -0.02em;
+}
+
+.font-editorial-regular {
+  font-family: var(--font-serif);
+  font-style: normal;
+}
+
+/* Restrained Pastel Utility Badges */
+.badge-lavender {
+  background-color: #F1EEF9;
+  color: #6444A6;
+  border: 1px solid #E4DCF5;
+}
+
+.badge-mint {
+  background-color: #EEF7F2;
+  color: #23744D;
+  border: 1px solid #D9EDE2;
+}
+
+.badge-butter {
+  background-color: #FAF6E8;
+  color: #8C6819;
+  border: 1px solid #F3ECCF;
+}
+
+.badge-blush {
+  background-color: #FDF0ED;
+  color: #FF2D78;
+  border: 1px solid #F8DCD4;
+}
+
+.badge-pink {
+  background-color: #FFF0F5;
+  color: #FF2D78;
+  border: 1px solid #FFE0EB;
+}
+
+.badge-sky {
+  background-color: #FFF0F5;
+  color: #FF2D78;
+  border: 1px solid #FFE0EB;
+}
+
+.badge-neutral {
+  background-color: #F0F0EB;
+  color: #40403C;
+  border: 1px solid #E2E2DC;
+}
+
+/* Glassmorphism & Soft Ambient Surface */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(231, 231, 226, 0.9);
+}
+
+.glass-panel-dark {
+  background: rgba(15, 15, 15, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   GLOBAL DESIGN SYSTEM: CARDS & CONTAINERS
+   ========================================================================== */
+.app-card,
+.influverse-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-card-interactive {
+  background: #FFFFFF;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-card-interactive:hover,
+.influverse-card:hover {
+  border-color: #0A0A0A;
+  box-shadow: 0 16px 36px -12px rgba(10, 10, 10, 0.08);
+  transform: translateY(-2px);
+}
+
+.app-card-subtle {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+}
+
+.app-card-container {
+  border-radius: var(--radius-container);
+}
+
+.app-panel-dark {
+  background: #0A0A0A;
+  color: #FFFFFF;
+  border-radius: var(--radius-container);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   GLOBAL DESIGN SYSTEM: BUTTONS
+   ========================================================================== */
+.btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-base:disabled,
+.btn-base[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Button Standard Sizes */
+.btn-lg {
+  height: var(--btn-h-lg);
+  padding: 0 24px;
+  font-size: 15px;
+  border-radius: var(--radius-pill);
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .btn-lg {
+    font-size: 16px;
+    padding: 0 28px;
+  }
+}
+
+.btn-md {
+  height: var(--btn-h-md);
+  padding: 0 20px;
+  font-size: 14px;
+  border-radius: var(--radius-pill);
+  gap: 8px;
+}
+
+.btn-sm {
+  height: var(--btn-h-sm);
+  padding: 0 14px;
+  font-size: 12px;
+  border-radius: var(--radius-pill);
+  gap: 6px;
+}
+
+/* Square / Icon-only variations */
+.btn-icon-lg {
+  width: var(--btn-h-lg);
+  height: var(--btn-h-lg);
+  padding: 0;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-md {
+  width: var(--btn-h-md);
+  height: var(--btn-h-md);
+  padding: 0;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-sm {
+  width: var(--btn-h-sm);
+  height: var(--btn-h-sm);
+  padding: 0;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Radius Shape Overrides */
+.btn-rounded {
+  border-radius: var(--radius-input) !important;
+}
+
+.btn-rounded-card {
+  border-radius: var(--radius-card) !important;
+}
+
+/* Explicit Card and Container Border Radius Utilities */
+.rounded-card {
+  border-radius: 28px !important;
+}
+
+.rounded-container {
+  border-radius: 28px !important;
+}
+
+.rounded-input {
+  border-radius: 14px !important;
+}
+
+.rounded-inner {
+  border-radius: 12px !important;
+}
+
+/* Eradicate browser default black rectangle focus outline on inputs */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  box-shadow: none;
+}
+
+/* Button Variants */
+.btn-primary {
+  background-color: #0A0A0A;
+  color: #FAFAFA;
+  border: 1px solid transparent;
+}
+
+.btn-primary:hover {
+  background-color: #FF2D78;
+  color: #FFFFFF;
+  border-color: #FF2D78;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -4px rgba(255, 45, 120, 0.35);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-pink {
+  background-color: #FF2D78;
+  color: #FFFFFF;
+  border: 1px solid transparent;
+  box-shadow: 0 4px 14px -2px rgba(255, 45, 120, 0.3);
+}
+
+.btn-pink:hover {
+  background-color: #E01E69;
+  color: #FFFFFF;
+  border-color: #E01E69;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -4px rgba(255, 45, 120, 0.45);
+}
+
+.btn-pink:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary,
+.btn-outline {
+  background-color: #FFFFFF;
+  color: #0A0A0A;
+  border: 1px solid var(--border-default);
+}
+
+.btn-secondary:hover,
+.btn-outline:hover {
+  border-color: #0A0A0A;
+  background-color: #FAFAF8;
+  color: #0A0A0A;
+  box-shadow: 0 2px 8px -2px rgba(10, 10, 10, 0.06);
+}
+
+.btn-secondary:active,
+.btn-outline:active {
+  transform: scale(0.98);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+  background-color: var(--bg-subtle);
+  color: #0A0A0A;
+}
+
+.btn-white {
+  background-color: #FFFFFF;
+  color: #0A0A0A;
+  border: 1px solid transparent;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.08);
+}
+
+.btn-white:hover {
+  background-color: #FF2D78;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -4px rgba(255, 45, 120, 0.45);
+}
+
+.btn-white:active {
+  transform: scale(0.98);
+}
+
+.btn-dark-outline {
+  background-color: transparent;
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.btn-dark-outline:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.btn-dark-outline:active {
+  transform: scale(0.98);
+}
+
+.btn-danger {
+  background-color: #FFF1F0;
+  color: #CF1322;
+  border: 1px solid #FFA39E;
+}
+
+.btn-danger:hover {
+  background-color: #CF1322;
+  color: #FFFFFF;
+  border-color: #CF1322;
+}
+
+/* ==========================================================================
+   GLOBAL DESIGN SYSTEM: BADGES & CHIPS
+   ========================================================================== */
+.badge-base {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  line-height: 1;
+  border-radius: var(--radius-pill);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.badge-md {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.badge-sm {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.badge-dark {
+  background-color: #0A0A0A;
+  color: #FFFFFF;
+  border: 1px solid #222222;
+}
+
+/* ==========================================================================
+   GLOBAL DESIGN SYSTEM: TYPOGRAPHY HIERARCHY
+   ========================================================================== */
+.type-display {
+  font-family: var(--font-sans);
+  font-size: var(--type-display);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: #0A0A0A;
+}
+
+.type-h1 {
+  font-family: var(--font-sans);
+  font-size: var(--type-page);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: #0A0A0A;
+}
+
+.type-h2 {
+  font-family: var(--font-sans);
+  font-size: var(--type-section);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #0A0A0A;
+}
+
+.type-h3 {
+  font-family: var(--font-sans);
+  font-size: var(--type-card);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: #0A0A0A;
+}
+
+.type-h4 {
+  font-family: var(--font-sans);
+  font-size: var(--type-card);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: #0A0A0A;
+}
+
+.type-body-lg {
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.type-body {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.type-caption {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
+}
+
+.type-overline {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Ant Design Global Button & Input Standardization */
+.ant-btn {
+  font-family: var(--font-sans) !important;
+  letter-spacing: -0.01em !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ant-btn-primary {
+  background-color: #0A0A0A !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus,
+.ant-btn-primary:active {
+  background-color: #FF2D78 !important;
+  color: #FFFFFF !important;
+}
+
+.ant-btn-primary:hover *,
+.ant-btn-primary:focus *,
+.ant-btn-primary:active * {
+  color: #FFFFFF !important;
+}
+
+/* Stable Ant Design form shell before client-side styles hydrate */
+.ant-input-affix-wrapper {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ant-input-affix-wrapper:hover {
+  border-color: var(--text-primary);
+}
+
+.ant-input-affix-wrapper:focus-within {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+}
+
+.ant-input-affix-wrapper .ant-input-prefix,
+.ant-input-affix-wrapper .ant-input-suffix {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.ant-input-affix-wrapper .ant-input-prefix {
+  margin-inline-end: 8px;
+}
+
+.ant-input-affix-wrapper .ant-input-suffix {
+  margin-inline-start: 8px;
+}
+
+.ant-input-affix-wrapper > input.ant-input {
+  min-width: 0;
+  width: 100%;
+  flex: auto;
+  padding: 0;
+  color: var(--text-primary);
+  font: inherit;
+  line-height: inherit;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.ant-input-affix-wrapper > input.ant-input::placeholder {
+  color: #A3A39C;
+  opacity: 1;
+}
+
+.ant-input-password-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.ant-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+.ant-checkbox {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.ant-checkbox-input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ant-checkbox-inner {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+.ant-checkbox-checked .ant-checkbox-inner::after {
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  border: solid #FFFFFF;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  content: '';
+}
+
+/* Ensure any dark/custom Ant Design buttons maintain white text on hover */
+.ant-btn.bg-\[\#0A0A0A\],
+.ant-btn.bg-\[\#0a0a0a\],
+.ant-btn.bg-black {
+  color: #FFFFFF !important;
+}
+
+.ant-btn.bg-\[\#0A0A0A\]:hover,
+.ant-btn.bg-\[\#0a0a0a\]:hover,
+.ant-btn.bg-black:hover,
+.ant-btn.hover\:\!bg-\[\#FF2D78\]:hover,
+.ant-btn.hover\:\!bg-\[\#ff2d78\]:hover,
+.ant-btn.hover\:\!bg-\[\#23744D\]:hover,
+.ant-btn.hover\:\!bg-\[\#0A0A0A\]:hover,
+.ant-btn.hover\:\!bg-black:hover {
+  color: #FFFFFF !important;
+}
+
+.ant-btn.bg-\[\#0A0A0A\]:hover *,
+.ant-btn.bg-\[\#0a0a0a\]:hover *,
+.ant-btn.hover\:\!bg-\[\#FF2D78\]:hover *,
+.ant-btn.hover\:\!bg-\[\#ff2d78\]:hover *,
+.ant-btn.hover\:\!bg-\[\#23744D\]:hover * {
+  color: #FFFFFF !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAFAF8;
+}
+::-webkit-scrollbar-thumb {
+  background: #D8D8D0;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B0B0A8;
+}
+
+/* Horizontal scroll rows (tabs, thumbnails) without a visible scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Infinite Marquee Auto Scroll */
+@keyframes marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-infinite {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 35s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-infinite:hover {
+  animation-play-state: paused;
+}
+
+/* Ant Design Select & Dropdown Styling */
+.ant-select-dropdown {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E7E7E2 !important;
+  border-radius: 16px !important;
+  padding: 6px !important;
+  box-shadow: 0 12px 32px -4px rgba(10, 10, 10, 0.12) !important;
+}
+
+.ant-select-item {
+  font-family: var(--font-sans) !important;
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  margin-bottom: 2px !important;
+  color: #0A0A0A !important;
+  font-size: 14px !important;
+  transition: all 0.15s ease !important;
+}
+
+.ant-select-item-option-content {
+  color: #0A0A0A !important;
+  font-weight: 500 !important;
+}
+
+/* Option Hover State */
+.ant-select-item-option-active:not(.ant-select-item-option-selected),
+.ant-select-item-option:hover {
+  background-color: #FAFAF8 !important;
+  color: #0A0A0A !important;
+}
+
+.ant-select-item-option-active:not(.ant-select-item-option-selected) .ant-select-item-option-content,
+.ant-select-item-option:hover .ant-select-item-option-content {
+  color: #0A0A0A !important;
+}
+
+/* Option Selected State */
+.ant-select-item-option-selected {
+  background-color: #F4F4F0 !important;
+  color: #0A0A0A !important;
+  font-weight: 700 !important;
+}
+
+.ant-select-item-option-selected .ant-select-item-option-content {
+  color: #0A0A0A !important;
+  font-weight: 700 !important;
+}
+
+.ant-select-item-option-selected:hover {
+  background-color: #EAEAE3 !important;
+}
+
+/* Dropdown Menu Items */
+.ant-dropdown-menu {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E7E7E2 !important;
+  border-radius: 16px !important;
+  padding: 6px !important;
+  box-shadow: 0 12px 32px -4px rgba(10, 10, 10, 0.12) !important;
+}
+
+.ant-dropdown-menu-item {
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  color: #0A0A0A !important;
+  font-family: var(--font-sans) !important;
+}
+
+.ant-dropdown-menu-item:hover,
+.ant-dropdown-menu-item-active {
+  background-color: #FAFAF8 !important;
+  color: #0A0A0A !important;
+}
+
+.ant-dropdown-menu-item-selected {
+  background-color: #F4F4F0 !important;
+  color: #0A0A0A !important;
+  font-weight: 700 !important;
+}
+
+/* Skeleton Loading Shimmer Effects */
+@keyframes shimmer-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #F0F0EB 0%,
+    #FAFAF8 50%,
+    #F0F0EB 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.8s ease-in-out infinite;
+}
+
+.skeleton-shimmer-dark {
+  background: linear-gradient(
+    90deg,
+    #1E1E1E 0%,
+    #2A2A2A 50%,
+    #1E1E1E 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.8s ease-in-out infinite;
+}
+
+/* Auth Network Floating Node Animations */
+@keyframes float-gentle-1 {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+
+@keyframes float-gentle-2 {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(5px) scale(0.99);
+  }
+}
+
+@keyframes float-gentle-3 {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.01);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.animate-float-1 {
+  animation: float-gentle-1 5s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-gentle-2 6s ease-in-out infinite 0.8s;
+}
+
+.animate-float-3 {
+  animation: float-gentle-3 5.5s ease-in-out infinite 1.6s;
+}
+
+.animate-pulse-dot {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+/* Ant Design Modal Polish - Prevents Overlaps & Enhances UX */
+.ant-modal .ant-modal-content {
+  border-radius: 24px !important;
+  border: 1px solid #E7E7E2 !important;
+  box-shadow: 0 20px 50px -12px rgba(10, 10, 10, 0.16) !important;
+  padding: 24px !important;
+}
+
+.ant-modal .ant-modal-close {
+  top: 18px !important;
+  right: 18px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 9999px !important;
+  transition: all 0.2s ease !important;
+}
+
+.ant-modal .ant-modal-close:hover {
+  background-color: #F4F4F0 !important;
+}
+
+.ant-modal-mask {
+  backdrop-filter: blur(4px) !important;
+  background-color: rgba(10, 10, 10, 0.45) !important;
+}
+
+/* Phones only. Standard text-lg and up already scale through the fluid type tokens.
+   These rules cover hardcoded display sizes and the large card padding that was
+   written for desktop. They stop at 639px so sm: and lg: styles stay intact. */
+@media (max-width: 639px) {
+  .text-\[28px\],
+  .text-\[32px\],
+  .min-\[420px\]\:text-4xl,
+  .text-\[1\.65rem\],
+  .text-\[1\.625rem\],
+  .text-\[2\.15rem\],
+  .text-\[2\.35rem\] {
+    font-size: var(--type-page);
+    line-height: 1.12;
+  }
+
+  .leading-\[28px\],
+  .leading-\[26px\],
+  .leading-\[24px\] {
+    line-height: 1.45;
+  }
+
+  .rounded-3xl {
+    border-radius: var(--card-radius);
+  }
+
+  .p-5 { padding: 0.875rem; }
+  .p-6 { padding: var(--card-pad); }
+  .p-7 { padding: 1.05rem; }
+  .p-8 { padding: 1.15rem; }
+  .px-6 { padding-left: var(--card-pad); padding-right: var(--card-pad); }
+  .px-8 { padding-left: var(--card-pad); padding-right: var(--card-pad); }
+  .py-6 { padding-top: var(--card-pad); padding-bottom: var(--card-pad); }
+  .py-8 { padding-top: 1.15rem; padding-bottom: 1.15rem; }
+  .py-10 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  .py-12 { padding-top: 2rem; padding-bottom: 2rem; }
+  .gap-5, .gap-6 { gap: var(--card-gap); }
+  .gap-7, .gap-8 { gap: 1rem; }
+  .mb-6 { margin-bottom: 0.75rem; }
+  .mt-6 { margin-top: 0.75rem; }
+  .mb-8 { margin-bottom: 1rem; }
+  .mt-8 { margin-top: 1rem; }
+  .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: var(--card-gap); }
+  .space-y-7 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.875rem; }
+  .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+}
+
